@@ -438,6 +438,68 @@ Behavior notes:
   </Accordion>
 </AccordionGroup>
 
+## System prompts
+
+WhatsApp supports separate system-prompt defaults for group chats and direct chats, plus granular overrides for groups and direct chats.
+
+Resolution hierarchy for group messages:
+
+1. **Group default system prompt** (`channels.whatsapp.groupSystemPrompt` or `channels.whatsapp.accounts.<id>.groupSystemPrompt`): the root value applies to all accounts; an account-level value overrides it for that account.
+2. **Group-specific system prompt** (`channels.whatsapp.groups["<groupId>"].systemPrompt` or `channels.whatsapp.groups["*"].systemPrompt`): the specific group entry is used if it defines a `systemPrompt`; otherwise WhatsApp falls back to the wildcard group entry.
+
+Resolution hierarchy for direct messages:
+
+1. **Direct default system prompt** (`channels.whatsapp.directSystemPrompt` or `channels.whatsapp.accounts.<id>.directSystemPrompt`): the root value applies to all accounts; an account-level value overrides it for that account.
+2. **Direct-specific system prompt** (`channels.whatsapp.direct["<peerId>"].systemPrompt` or `channels.whatsapp.direct["*"].systemPrompt`): the specific direct-chat entry is used if it defines a `systemPrompt`; otherwise WhatsApp falls back to the wildcard direct entry.
+
+Map override semantics:
+
+- Account `groups` fully override root `groups`; they do not merge.
+- Account `direct` fully override root `direct`; they do not merge.
+- Existing `dms` remains the lightweight per-DM history override bucket (`dms.<id>.historyLimit`); prompt overrides live under `direct`.
+
+Example:
+
+```json5
+{
+  channels: {
+    whatsapp: {
+      groupSystemPrompt: "Respond in English only in groups.",
+      directSystemPrompt: "Respond in English only in direct chats.",
+      groups: {
+        // Applies to all accounts that do not define their own groups map.
+        "*": { systemPrompt: "Default prompt for all groups." },
+      },
+      direct: {
+        // Applies to all accounts that do not define their own direct map.
+        "*": { systemPrompt: "Default prompt for all direct chats." },
+      },
+      accounts: {
+        work: {
+          groupSystemPrompt: "You are a work group assistant.",
+          directSystemPrompt: "You are a work direct-chat assistant.",
+          groups: {
+            // This account defines its own groups, so root groups are fully
+            // replaced. To keep a wildcard, define "*" explicitly here too.
+            "120363406415684625@g.us": {
+              requireMention: false,
+              systemPrompt: "Focus on project management.",
+            },
+            "*": { systemPrompt: "Default prompt for work groups." },
+          },
+          direct: {
+            // This account defines its own direct map, so root direct entries are
+            // fully replaced. To keep a wildcard, define "*" explicitly here too.
+            "+15551234567": { systemPrompt: "Prompt for a specific work direct chat." },
+            "*": { systemPrompt: "Default prompt for work direct chats." },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
 ## Configuration reference pointers
 
 Primary reference:
@@ -451,6 +513,7 @@ High-signal WhatsApp fields:
 - multi-account: `accounts.<id>.enabled`, `accounts.<id>.authDir`, account-level overrides
 - operations: `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`
 - session behavior: `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`
+- prompts: `groupSystemPrompt`, `directSystemPrompt`, `groups.<id>.systemPrompt`, `direct.<id>.systemPrompt`
 
 ## Related
 

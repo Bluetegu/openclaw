@@ -7,6 +7,117 @@ import type { ChannelOutboundAdapter } from "./types.js";
 export const WHATSAPP_GROUP_INTRO_HINT =
   "WhatsApp IDs: SenderId is the participant JID (group participant id).";
 
+export type WhatsAppGroupSystemPromptParams = {
+  /** Pre-resolved merged account config (groupSystemPrompt + groups). Mirrors Telegram's groupConfig param style. */
+  accountConfig?: {
+    groupSystemPrompt?: string;
+    groups?: Record<string, { systemPrompt?: string }>;
+  } | null;
+  groupId?: string | null;
+};
+
+export type WhatsAppDirectSystemPromptParams = {
+  /** Pre-resolved merged account config (directSystemPrompt + direct). */
+  accountConfig?: {
+    directSystemPrompt?: string;
+    direct?: Record<string, { systemPrompt?: string }>;
+  } | null;
+  peerId?: string | null;
+};
+
+/**
+ * Resolves and combines WhatsApp system prompts from a pre-resolved account config slice.
+ * Follows the same pattern as Telegram's resolveTelegramGroupPromptSettings: the caller
+ * resolves the account config first, then passes the relevant slice here.
+ *
+ * Resolution hierarchy for group messages:
+ *
+ * 1. Account system prompt (channels.whatsapp.groupSystemPrompt or
+ *    accounts.<id>.groupSystemPrompt):
+ *    - Root value applies to all accounts.
+ *    - Account-level value overrides root for that account.
+ *
+ * 2. Group system prompt (groups["<groupId>"].systemPrompt or
+ *    groups["*"].systemPrompt):
+ *    - The specific group entry is used if it defines a systemPrompt.
+ *    - Falls back to groups["*"].systemPrompt for groups with no specific entry.
+ *    - resolveWhatsAppAccount uses the same override semantics as the shared
+ *      resolveChannelGroups helper: account groups replace root groups entirely
+ *      (no deep merge). The resolved account config therefore already contains
+ *      root groups (including "*") whenever the account defines no groups of its
+ *      own, mirroring Telegram's resolveTelegramGroupPromptSettings pattern.
+ *
+ * 3. Final prompt delivered to the agent for group messages:
+ *    accountSystemPrompt + "\n\n" + groupSystemPrompt
+ *    (either part is omitted if not configured)
+ */
+export function resolveWhatsAppGroupSystemPrompt(
+  params: WhatsAppGroupSystemPromptParams,
+): string | undefined {
+  const accountSystemPrompt = params.accountConfig?.groupSystemPrompt?.trim() || undefined;
+
+  // Get group-level systemPrompt if groupId is provided.
+  // Resolve per-field: use the specific group's systemPrompt if set, otherwise
+  // fall back to the wildcard "*" entry so default prompts still apply even when
+  // the specific group entry only defines non-prompt settings (e.g. requireMention).
+  let groupSystemPrompt: string | undefined;
+  if (params.groupId) {
+    const groups = params.accountConfig?.groups;
+    // Resolution order: specific group entry → wildcard "*" entry.
+    // Root groups naturally reach here when the account defines no groups of its
+    // own (resolveWhatsAppAccount uses override-not-merge semantics, same as
+    // resolveChannelGroups: accountGroups ?? rootGroups).
+    groupSystemPrompt =
+      groups?.[params.groupId]?.systemPrompt?.trim() ||
+      groups?.["*"]?.systemPrompt?.trim() ||
+      undefined;
+  }
+
+  // Combine prompts following Telegram's pattern
+  const systemPrompts = [accountSystemPrompt, groupSystemPrompt].filter(Boolean);
+  return systemPrompts.length > 0 ? systemPrompts.join("\n\n") : undefined;
+}
+
+/**
+ * Resolves and combines WhatsApp system prompts for direct chats from a pre-resolved
+ * account config slice.
+ *
+ * Resolution hierarchy for direct messages:
+ *
+ * 1. Account direct system prompt (channels.whatsapp.directSystemPrompt or
+ *    accounts.<id>.directSystemPrompt):
+ *    - Root value applies to all accounts.
+ *    - Account-level value overrides root for that account.
+ *
+ * 2. Direct-chat system prompt (direct["<peerId>"].systemPrompt or
+ *    direct["*"].systemPrompt):
+ *    - The specific DM entry is used if it defines a systemPrompt.
+ *    - Falls back to direct["*"].systemPrompt for direct chats with no specific entry.
+ *    - resolveWhatsAppAccount applies the same override semantics here as for groups:
+ *      account direct config replaces root direct config entirely (no deep merge).
+ *
+ * 3. Final prompt delivered to the agent for direct messages:
+ *    directSystemPrompt + "\n\n" + dmSystemPrompt
+ *    (either part is omitted if not configured)
+ */
+export function resolveWhatsAppDirectSystemPrompt(
+  params: WhatsAppDirectSystemPromptParams,
+): string | undefined {
+  const accountDirectSystemPrompt = params.accountConfig?.directSystemPrompt?.trim() || undefined;
+
+  let directSystemPrompt: string | undefined;
+  if (params.peerId) {
+    const direct = params.accountConfig?.direct;
+    directSystemPrompt =
+      direct?.[params.peerId]?.systemPrompt?.trim() ||
+      direct?.["*"]?.systemPrompt?.trim() ||
+      undefined;
+  }
+
+  const systemPrompts = [accountDirectSystemPrompt, directSystemPrompt].filter(Boolean);
+  return systemPrompts.length > 0 ? systemPrompts.join("\n\n") : undefined;
+}
+
 export function resolveWhatsAppGroupIntroHint(): string {
   return WHATSAPP_GROUP_INTRO_HINT;
 }

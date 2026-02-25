@@ -21,6 +21,13 @@ export type WhatsAppGroupConfig = {
   requireMention?: boolean;
   tools?: GroupToolPolicyConfig;
   toolsBySender?: GroupToolPolicyBySenderConfig;
+  /** Optional system prompt for this group. */
+  systemPrompt?: string;
+};
+
+export type WhatsAppDirectConfig = DmConfig & {
+  /** Optional system prompt for this direct chat. */
+  systemPrompt?: string;
 };
 
 export type WhatsAppAckReactionConfig = {
@@ -62,7 +69,7 @@ type WhatsAppSharedConfig = {
   historyLimit?: number;
   /** Max DM turns to keep as history context. */
   dmHistoryLimit?: number;
-  /** Per-DM config overrides keyed by user ID. */
+  /** Per-DM history overrides keyed by user ID. */
   dms?: Record<string, DmConfig>;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
@@ -75,6 +82,8 @@ type WhatsAppSharedConfig = {
   /** Merge streamed block replies before sending. */
   blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   groups?: Record<string, WhatsAppGroupConfig>;
+  /** Per-direct-chat prompt overrides keyed by user ID or `*` wildcard. */
+  direct?: Record<string, WhatsAppDirectConfig>;
   /** Acknowledgment reaction sent immediately upon message receipt. */
   ackReaction?: WhatsAppAckReactionConfig;
   /** Debounce window (ms) for batching rapid consecutive messages from the same sender (0 to disable). */
@@ -108,6 +117,10 @@ export type WhatsAppConfig = WhatsAppConfigCore &
     defaultAccount?: string;
     /** Per-action tool gating (default: true for all). */
     actions?: WhatsAppActionConfig;
+    /** Optional system prompt for WhatsApp group messages across all accounts (global default for groups). */
+    groupSystemPrompt?: string;
+    /** Optional system prompt for WhatsApp direct messages across all accounts (global default for DMs). */
+    directSystemPrompt?: string;
   };
 
 export type WhatsAppAccountConfig = WhatsAppConfigCore &
@@ -118,4 +131,8 @@ export type WhatsAppAccountConfig = WhatsAppConfigCore &
     enabled?: boolean;
     /** Override auth directory (Baileys multi-file auth state). */
     authDir?: string;
+    /** Optional system prompt for WhatsApp group messages on this account (global for that account's groups). */
+    groupSystemPrompt?: string;
+    /** Optional system prompt for WhatsApp direct messages on this account (global for that account's DMs). */
+    directSystemPrompt?: string;
   };

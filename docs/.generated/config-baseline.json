@@ -36505,6 +36505,46 @@
       "hasChildren": false
     },
     {
+      "path": "channels.whatsapp.accounts.*.direct",
+      "kind": "channel",
+      "type": "object",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": true
+    },
+    {
+      "path": "channels.whatsapp.accounts.*.direct.*",
+      "kind": "channel",
+      "type": "object",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": true
+    },
+    {
+      "path": "channels.whatsapp.accounts.*.direct.*.systemPrompt",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.accounts.*.directSystemPrompt",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
       "path": "channels.whatsapp.accounts.*.dmHistoryLimit",
       "kind": "channel",
       "type": "integer",
@@ -36631,6 +36671,16 @@
       "path": "channels.whatsapp.accounts.*.groups.*.requireMention",
       "kind": "channel",
       "type": "boolean",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.accounts.*.groups.*.systemPrompt",
+      "kind": "channel",
+      "type": "string",
       "required": false,
       "deprecated": false,
       "sensitive": false,
@@ -36779,6 +36829,16 @@
     },
     {
       "path": "channels.whatsapp.accounts.*.groups.*.toolsBySender.*.deny.*",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.accounts.*.groupSystemPrompt",
       "kind": "channel",
       "type": "string",
       "required": false,
@@ -37196,6 +37256,46 @@
       "hasChildren": false
     },
     {
+      "path": "channels.whatsapp.direct",
+      "kind": "channel",
+      "type": "object",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": true
+    },
+    {
+      "path": "channels.whatsapp.direct.*",
+      "kind": "channel",
+      "type": "object",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": true
+    },
+    {
+      "path": "channels.whatsapp.direct.*.systemPrompt",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.directSystemPrompt",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
       "path": "channels.whatsapp.dmHistoryLimit",
       "kind": "channel",
       "type": "integer",
@@ -37328,6 +37428,16 @@
       "path": "channels.whatsapp.groups.*.requireMention",
       "kind": "channel",
       "type": "boolean",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.groups.*.systemPrompt",
+      "kind": "channel",
+      "type": "string",
       "required": false,
       "deprecated": false,
       "sensitive": false,
@@ -37476,6 +37586,16 @@
     },
     {
       "path": "channels.whatsapp.groups.*.toolsBySender.*.deny.*",
+      "kind": "channel",
+      "type": "string",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "hasChildren": false
+    },
+    {
+      "path": "channels.whatsapp.groupSystemPrompt",
       "kind": "channel",
       "type": "string",
       "required": false,

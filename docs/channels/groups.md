@@ -14,83 +14,23 @@ OpenClaw treats group chats consistently across surfaces: WhatsApp, Telegram, Di
 OpenClaw “lives” on your own messaging accounts. There is no separate WhatsApp bot user.
 If **you** are in a group, OpenClaw can see that group and respond there.
 
-Default behavior:
-
-- Groups are restricted (`groupPolicy: "allowlist"`).
-- Replies require a mention unless you explicitly disable mention gating.
-
-Translation: allowlisted senders can trigger OpenClaw by mentioning it.
-
-> TL;DR
->
-> - **DM access** is controlled by `*.allowFrom`.
-> - **Group access** is controlled by `*.groupPolicy` + allowlists (`*.groups`, `*.groupAllowFrom`).
-> - **Reply triggering** is controlled by mention gating (`requireMention`, `/activation`).
-
-Quick flow (what happens to a group message):
-
-```
-groupPolicy? disabled -> drop
-groupPolicy? allowlist -> group allowed? no -> drop
-requireMention? yes -> mentioned? no -> store for context only
-otherwise -> reply
-```
-
-![Group message flow](/images/groups-flow.svg)
-
-If you want...
-
-| Goal                                         | What to set                                                |
-| -------------------------------------------- | ---------------------------------------------------------- |
-| Allow all groups but only reply on @mentions | `groups: { "*": { requireMention: true } }`                |
-| Disable all group replies                    | `groupPolicy: "disabled"`                                  |
-| Only specific groups                         | `groups: { "<group-id>": { ... } }` (no `"*"` key)         |
-| Only you can trigger in groups               | `groupPolicy: "allowlist"`, `groupAllowFrom: ["+1555..."]` |
-
-## Session keys
-
-- Group sessions use `agent:<agentId>:<channel>:group:<id>` session keys (rooms/channels use `agent:<agentId>:<channel>:channel:<id>`).
-- Telegram forum topics add `:topic:<threadId>` to the group id so each topic has its own session.
-- Direct chats use the main session (or per-sender if configured).
-- Heartbeats are skipped for group sessions.
-
-## Pattern: personal DMs + public groups (single agent)
-
-Yes — this works well if your “personal” traffic is **DMs** and your “public” traffic is **groups**.
-
-Why: in single-agent mode, DMs typically land in the **main** session key (`agent:main:main`), while groups always use **non-main** session keys (`agent:main:<channel>:group:<id>`). If you enable sandboxing with `mode: "non-main"`, those group sessions run in Docker while your main DM session stays on-host.
-
-This gives you one agent “brain” (shared workspace + memory), but two execution postures:
-
-- **DMs**: full tools (host)
-- **Groups**: sandbox + restricted tools (Docker)
-
-> If you need truly separate workspaces/personas (“personal” and “public” must never mix), use a second agent + bindings. See [Multi-Agent Routing](/concepts/multi-agent).
-
-Example (DMs on host, groups sandboxed + messaging-only tools):
-
-```json5
-{
-  agents: {
-    defaults: {
-      sandbox: {
-        mode: "non-main", // groups/channels are non-main -> sandboxed
-        scope: "session", // strongest isolation (one container per group/channel)
         workspaceAccess: "none",
       },
-    },
-  },
-  tools: {
-    sandbox: {
-      tools: {
-        // If allow is non-empty, everything else is blocked (deny still wins).
-        allow: ["group:messaging", "group:sessions"],
-        deny: ["group:runtime", "group:fs", "group:ui", "nodes", "cron", "gateway"],
-      },
-    },
-  },
+
+See [WhatsApp](/channels/whatsapp#system-prompts) for WhatsApp-specific system prompt behavior and [Group messages](/channels/group-messages) for WhatsApp-only behavior such as history injection and mention handling.
+},
+tools: {
+sandbox: {
+tools: {
+// If allow is non-empty, everything else is blocked (deny still wins).
+allow: ["group:messaging", "group:sessions"],
+deny: ["group:runtime", "group:fs", "group:ui", "nodes", "cron", "gateway"],
+},
+},
+},
 }
-```
+
+````
 
 Want “groups can only see folder X” instead of “no host access”? Keep `workspaceAccess: "none"` and mount only allowlisted paths into the sandbox:
 
@@ -112,7 +52,7 @@ Want “groups can only see folder X” instead of “no host access”? Keep `w
     },
   },
 }
-```
+````
 
 Related:
 
@@ -378,6 +318,68 @@ The agent system prompt includes a group intro on the first turn of a new group 
 - List chats: `imsg chats --limit 20`.
 - Group replies always go back to the same `chat_id`.
 
+## WhatsApp system prompts
+
+WhatsApp supports separate system-prompt defaults for group chats and direct chats, plus granular overrides for groups and direct chats.
+
+Resolution hierarchy for group messages:
+
+1. **Group default system prompt** (`channels.whatsapp.groupSystemPrompt` or `accounts.<id>.groupSystemPrompt`): the root value applies to all accounts; an account-level value overrides it for that account.
+2. **Group-specific system prompt** (`groups["<groupId>"].systemPrompt` or `groups["*"].systemPrompt`): the specific group entry is used if it defines a `systemPrompt`; falls back to `groups["*"].systemPrompt` for groups with no specific entry.
+
+Resolution hierarchy for direct messages:
+
+1. **Direct default system prompt** (`channels.whatsapp.directSystemPrompt` or `accounts.<id>.directSystemPrompt`): the root value applies to all accounts; an account-level value overrides it for that account.
+2. **Direct-specific system prompt** (`direct["<peerId>"].systemPrompt` or `direct["*"].systemPrompt`): the specific direct-chat entry is used if it defines a `systemPrompt`; falls back to `direct["*"].systemPrompt` for direct chats with no specific entry.
+
+Map override semantics:
+
+- Account `groups` fully override root `groups`; they do not merge.
+- Account `direct` fully override root `direct`; they do not merge.
+- Existing `dms` remains the lightweight per-DM history override bucket (`dms.<id>.historyLimit`); prompt overrides live under `direct`.
+
+Example:
+
+```json5
+{
+  channels: {
+    whatsapp: {
+      groupSystemPrompt: "Respond in English only in groups.",
+      directSystemPrompt: "Respond in English only in direct chats.",
+      groups: {
+        // Applies to all accounts that do not define their own groups map.
+        "*": { systemPrompt: "Default prompt for all groups." },
+      },
+      direct: {
+        // Applies to all accounts that do not define their own direct map.
+        "*": { systemPrompt: "Default prompt for all direct chats." },
+      },
+      accounts: {
+        work: {
+          groupSystemPrompt: "You are a work group assistant.",
+          directSystemPrompt: "You are a work direct-chat assistant.",
+          groups: {
+            // This account defines its own groups, so root groups are fully
+            // replaced. To keep a wildcard, define "*" explicitly here too.
+            "120363406415684625@g.us": {
+              requireMention: false,
+              systemPrompt: "Focus on project management.",
+            },
+            "*": { systemPrompt: "Default prompt for work groups." },
+          },
+          direct: {
+            // This account defines its own direct map, so root direct entries are
+            // fully replaced. To keep a wildcard, define "*" explicitly here too.
+            "+15551234567": { systemPrompt: "Prompt for a specific work direct chat." },
+            "*": { systemPrompt: "Default prompt for work direct chats." },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
 ## WhatsApp specifics
 
-See [Group messages](/channels/group-messages) for WhatsApp-only behavior (history injection, mention handling details).
+See [WhatsApp](/channels/whatsapp#system-prompts) for WhatsApp-specific system prompt behavior and [Group messages](/channels/group-messages) for WhatsApp-only behavior such as history injection and mention handling.

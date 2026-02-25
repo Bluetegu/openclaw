@@ -33,7 +33,11 @@ export type ResolvedWhatsAppAccount = {
   blockStreaming?: boolean;
   ackReaction?: WhatsAppAccountConfig["ackReaction"];
   groups?: WhatsAppAccountConfig["groups"];
+  direct?: WhatsAppAccountConfig["direct"];
   debounceMs?: number;
+  groupSystemPrompt?: string;
+  directSystemPrompt?: string;
+  dms?: WhatsAppAccountConfig["dms"];
 };
 
 export const DEFAULT_WHATSAPP_MEDIA_MAX_MB = 50;
@@ -155,7 +159,11 @@ export function resolveWhatsAppAccount(params: {
     blockStreaming: merged.blockStreaming,
     ackReaction: merged.ackReaction,
     groups: merged.groups,
+    direct: merged.direct,
+    dms: merged.dms,
     debounceMs: merged.debounceMs,
+    groupSystemPrompt: merged.groupSystemPrompt,
+    directSystemPrompt: merged.directSystemPrompt,
   };
 }
 
